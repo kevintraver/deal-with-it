@@ -16,12 +16,21 @@ class DealWithItApp {
         const copyBtn = document.getElementById('copyBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const newImageBtn = document.getElementById('newImageBtn');
+        const retryBtn = document.getElementById('retryBtn');
         const apiKeyInput = document.getElementById('apiKey');
         
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
         uploadArea.addEventListener('click', () => {
             // Only trigger if upload content is visible (not when image is displayed)
             if (!document.getElementById('uploadContent').classList.contains('hidden')) {
+                // Check for API key before opening file picker
+                const apiKey = document.getElementById('apiKey').value;
+                if (!apiKey || !apiKey.trim()) {
+                    this.showValidationError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+                    // Focus on API key input
+                    document.getElementById('apiKey').focus();
+                    return;
+                }
                 imageInput.click();
             }
         });
@@ -31,7 +40,12 @@ class DealWithItApp {
             e.stopPropagation(); // Prevent event bubbling to upload area
             this.reset();
         });
-        apiKeyInput.addEventListener('input', () => this.saveApiKey());
+        retryBtn.addEventListener('click', () => this.retryProcessing());
+        apiKeyInput.addEventListener('input', () => {
+            this.saveApiKey();
+            // Don't auto-hide errors when retry button is visible
+            // Processing errors should only be dismissed by clicking "Try Again"
+        });
     }
 
     setupDragAndDrop() {
@@ -134,6 +148,13 @@ class DealWithItApp {
     }
 
     handleImageFile(file) {
+        // Check for API key first
+        const apiKey = document.getElementById('apiKey').value;
+        if (!apiKey || !apiKey.trim()) {
+            this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
@@ -141,14 +162,10 @@ class DealWithItApp {
                 this.originalImage = img;
                 this.displayImage(e.target.result);
                 
-                // Auto-process if API key is already present
-                const apiKey = document.getElementById('apiKey').value;
-                if (apiKey && apiKey.trim()) {
-                    // Small delay to let the image display first
-                    setTimeout(() => {
-                        this.processImage();
-                    }, 500);
-                }
+                // Auto-process since API key is validated
+                setTimeout(() => {
+                    this.processImage();
+                }, 500);
             };
             img.src = e.target.result;
         };
@@ -244,7 +261,7 @@ class DealWithItApp {
             
         } catch (error) {
             console.error('Error:', error);
-            this.showError(error.message || 'Failed to process image. Please check your API key and try again.');
+            this.showError(error.message || 'Failed to process image. Please check your API key and try again.', true);
         } finally {
             this.showProcessingOverlay(false);
         }
@@ -324,14 +341,31 @@ class DealWithItApp {
         document.getElementById('newImageBtn').classList.remove('hidden');
     }
     
-    showError(message) {
+    showError(message, showRetry = false) {
         const errorEl = document.getElementById('errorMessage');
-        errorEl.textContent = message;
+        const errorText = document.getElementById('errorText');
+        const retryBtn = document.getElementById('retryBtn');
+        
+        errorText.textContent = message;
         errorEl.classList.remove('hidden');
+        
+        if (showRetry && this.originalImage) {
+            retryBtn.classList.remove('hidden');
+        } else {
+            retryBtn.classList.add('hidden');
+        }
     }
     
     hideError() {
         document.getElementById('errorMessage').classList.add('hidden');
+        document.getElementById('retryBtn').classList.add('hidden');
+    }
+
+    retryProcessing() {
+        if (this.originalImage) {
+            this.hideError();
+            this.processImage();
+        }
     }
 
     saveApiKey() {
