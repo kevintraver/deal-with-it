@@ -3,12 +3,21 @@ class DealWithItApp {
         this.originalImage = null;
         this.processedImageUrl = null;
         this.lastUrlAttempt = null;
+        this.errorMessage = null;
+
+        // Centralized UI state
+        // phase: idle | fetchingUrl | processing | done | error
+        // tab: file | url
+        this.state = { phase: 'idle', tab: 'file' };
         
         this.initializeEventListeners();
         this.loadSavedApiKey();
         this.setupDragAndDrop();
         this.setupGlobalDragAndDrop();
         this.setupClipboardPaste();
+
+        // Initial render
+        this.render();
     }
 
     initializeEventListeners() {
@@ -177,6 +186,7 @@ class DealWithItApp {
     }
 
     handleImageFile(file) {
+        if (this.isBusy()) return; // Prevent actions during busy states
         // Check for API key first
         const apiKey = document.getElementById('apiKey').value;
         if (!apiKey || !apiKey.trim()) {
@@ -189,12 +199,10 @@ class DealWithItApp {
             const img = new Image();
             img.onload = () => {
                 this.originalImage = img;
-                this.displayImage(e.target.result);
-                
-                // Auto-process since API key is validated
-                setTimeout(() => {
-                    this.processImage();
-                }, 500);
+                this.setDisplayedImage(e.target.result);
+                // Immediately enter processing state to avoid flashing
+                this.setState({ phase: 'processing' });
+                this.processImage();
             };
             img.src = e.target.result;
         };
@@ -202,6 +210,7 @@ class DealWithItApp {
     }
 
     async handleUrlFetch(url) {
+        if (this.isBusy()) return;
         const apiKey = document.getElementById('apiKey').value;
         const trimmedUrl = (url || '').trim();
         this.lastUrlAttempt = trimmedUrl || null;
@@ -216,13 +225,9 @@ class DealWithItApp {
         }
         try {
             this.hideError();
-            
-            // Show processing overlay and hide URL content properly
-            const urlContent = document.getElementById('urlContent');
-            const uploadContent = document.getElementById('uploadContent');
-            if (urlContent) urlContent.classList.add('hidden');
-            if (uploadContent) uploadContent.classList.add('hidden');
-            this.showProcessingOverlay(true);
+            // Enter fetching state
+            this.setState({ phase: 'fetchingUrl', tab: 'url' });
+            this.setProcessingText('Fetching image...');
 
             // Try to fetch the image via our proxy to avoid CORS issues
             const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(trimmedUrl)}`;
@@ -243,18 +248,15 @@ class DealWithItApp {
             // Revoke object URL after image loads
             URL.revokeObjectURL(objectUrl);
 
-            // Process while overlay remains visible; processing will hide it
+            // Transition to processing and continue
+            this.setState({ phase: 'processing' });
+            this.setProcessingText('Adding sunglasses...');
             await this.processImage();
         } catch (error) {
             console.error('URL fetch error:', error);
             this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.', true);
-            
-            // Restore URL content on error and hide processing overlay
-            const urlContent = document.getElementById('urlContent');
-            const uploadContent = document.getElementById('uploadContent');
-            if (urlContent) urlContent.classList.remove('hidden');
-            if (uploadContent) uploadContent.classList.add('hidden');
-            this.showProcessingOverlay(false);
+            this.setState({ phase: 'error', tab: 'url' });
+            this.setProcessingText('');
         }
     }
 
@@ -264,7 +266,7 @@ class DealWithItApp {
             img.crossOrigin = 'anonymous';
             img.onload = () => {
                 this.originalImage = img;
-                this.displayImage(src);
+                this.setDisplayedImage(src);
                 resolve();
             };
             img.onerror = () => reject(new Error('Failed to load image'));
@@ -272,20 +274,9 @@ class DealWithItApp {
         });
     }
     
-    displayImage(imageSrc) {
-        // Hide both upload content and URL content when displaying image
-        document.getElementById('uploadContent').classList.add('hidden');
-        document.getElementById('urlContent').classList.add('hidden');
-        document.getElementById('imageDisplay').classList.remove('hidden');
-        
-        // Set the image source
+    setDisplayedImage(imageSrc) {
         const displayedImage = document.getElementById('displayedImage');
         displayedImage.src = imageSrc;
-        
-        // Remove cursor pointer and hover effect when showing image
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.classList.remove('cursor-pointer', 'hover:bg-gray-50');
-        uploadArea.classList.add('border-solid');
     }
     
     async processImage() {
@@ -295,7 +286,8 @@ class DealWithItApp {
             return;
         }
         
-        this.showProcessingOverlay(true);
+        this.setState({ phase: 'processing' });
+        this.setProcessingText('Adding sunglasses...');
         this.hideError();
         
         try {
@@ -355,16 +347,17 @@ class DealWithItApp {
             this.processedImageUrl = imageUrl;
             
             // Replace the displayed image with the processed one
-            this.displayImage(imageUrl);
-            
-            // Show action buttons after processing is complete
-            this.showActionButtons();
+            this.setDisplayedImage(imageUrl);
+            // Move to done state, which will reveal action buttons
+            this.setState({ phase: 'done' });
             
         } catch (error) {
             console.error('Error:', error);
             this.showError(error.message || 'Failed to process image. Please check your API key and try again.', true);
+            this.setState({ phase: 'error' });
+            this.setProcessingText('');
         } finally {
-            this.showProcessingOverlay(false);
+            // Render handles overlay visibility
         }
     }
     
@@ -377,8 +370,9 @@ class DealWithItApp {
             const blob = await response.blob();
             
             // Copy to clipboard
+            const type = blob.type || 'image/png';
             await navigator.clipboard.write([
-                new ClipboardItem({ 'image/png': blob })
+                new ClipboardItem({ [type]: blob })
             ]);
             
             // Show success feedback
@@ -412,80 +406,145 @@ class DealWithItApp {
         this.originalImage = null;
         this.processedImageUrl = null;
         this.lastUrlAttempt = null;
+        this.errorMessage = null;
         
-        // Reset UI to initial state
-        document.getElementById('uploadContent').classList.remove('hidden');
-        document.getElementById('urlContent').classList.add('hidden');
-        document.getElementById('imageDisplay').classList.add('hidden');
-        document.getElementById('actionButtons').classList.add('hidden');
-        document.getElementById('newImageBtn').classList.add('hidden');
+        // Clear inputs
         document.getElementById('imageInput').value = '';
         document.getElementById('imageUrlInput').value = '';
-        
-        // Restore upload area styling
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50');
-        uploadArea.classList.remove('border-solid');
-        uploadArea.classList.add('border-dashed');
-        
-        // Hide processing overlay
-        this.showProcessingOverlay(false);
+        // Reset UI state, keeping current tab
+        this.setState({ phase: 'idle' });
         this.hideError();
     }
-    
-    showProcessingOverlay(show) {
-        const overlay = document.getElementById('processingOverlay');
-        if (show) {
-            overlay.classList.remove('hidden');
-        } else {
-            overlay.classList.add('hidden');
-        }
+
+    // State/Render helpers
+    isBusy() {
+        return this.state.phase === 'fetchingUrl' || this.state.phase === 'processing';
     }
 
-    switchTab(tab) {
+    setProcessingText(text) {
+        const el = document.getElementById('processingText');
+        if (el) el.textContent = text || 'Adding sunglasses...';
+    }
+
+    setState(next) {
+        this.state = { ...this.state, ...next };
+        this.render();
+    }
+
+    render() {
+        const { phase, tab } = this.state;
+        const uploadContent = document.getElementById('uploadContent');
+        const urlContent = document.getElementById('urlContent');
+        const imageDisplay = document.getElementById('imageDisplay');
+        const actionButtons = document.getElementById('actionButtons');
+        const newImageBtn = document.getElementById('newImageBtn');
+        const overlay = document.getElementById('processingOverlay');
+        const uploadArea = document.getElementById('uploadArea');
         const tabFile = document.getElementById('tabFile');
         const tabUrl = document.getElementById('tabUrl');
-        const urlContent = document.getElementById('urlContent');
-        const uploadContent = document.getElementById('uploadContent');
-        const uploadArea = document.getElementById('uploadArea');
-        const imageUrlInput = document.getElementById('imageUrlInput');
+        const fetchUrlBtn = document.getElementById('fetchUrlBtn');
 
-        // Reset the form completely when switching tabs
-        this.reset();
-
+        // Tabs styling/selection
         if (tab === 'file') {
-            // Style tabs
             tabFile.classList.add('bg-white', 'shadow', 'text-gray-800');
             tabFile.setAttribute('aria-selected', 'true');
             tabUrl.classList.remove('bg-white', 'shadow', 'text-gray-800');
             tabUrl.setAttribute('aria-selected', 'false');
-
-            // Show file upload, hide URL
-            uploadContent.classList.remove('hidden');
-            urlContent.classList.add('hidden');
-
-            // Restore pointer/hover for upload area
-            uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50');
         } else {
             tabUrl.classList.add('bg-white', 'shadow', 'text-gray-800');
             tabUrl.setAttribute('aria-selected', 'true');
             tabFile.classList.remove('bg-white', 'shadow', 'text-gray-800');
             tabFile.setAttribute('aria-selected', 'false');
+        }
 
-            // Show URL input, hide file upload
-            urlContent.classList.remove('hidden');
+        // Disable interactions while busy
+        const disableCls = ['pointer-events-none', 'opacity-50'];
+        [tabFile, tabUrl].forEach((el) => {
+            if (this.isBusy()) el.classList.add(...disableCls); else el.classList.remove(...disableCls);
+        });
+
+        // Upload area pointer/hover
+        if (phase === 'idle') {
+            uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50', 'border-dashed');
+            uploadArea.classList.remove('border-solid');
+            uploadArea.classList.remove('pointer-events-none');
+        } else {
+            uploadArea.classList.remove('cursor-pointer', 'hover:bg-gray-50', 'border-dashed');
+            uploadArea.classList.add('border-solid');
+            // Only block interactions on the area while busy; allow buttons in done/error
+            if (this.isBusy()) {
+                uploadArea.classList.add('pointer-events-none');
+            } else {
+                uploadArea.classList.remove('pointer-events-none');
+            }
+        }
+
+        // Fetch button disabled state during busy
+        if (fetchUrlBtn) {
+            if (this.isBusy()) {
+                fetchUrlBtn.setAttribute('disabled', 'true');
+                fetchUrlBtn.classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                fetchUrlBtn.removeAttribute('disabled');
+                fetchUrlBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        // Visibility by phase
+        const showOverlay = phase === 'processing' || phase === 'fetchingUrl';
+        if (showOverlay) overlay.classList.remove('hidden'); else overlay.classList.add('hidden');
+
+        // Content panels
+        if (phase === 'idle') {
+            if (tab === 'file') {
+                uploadContent.classList.remove('hidden');
+                urlContent.classList.add('hidden');
+            } else {
+                urlContent.classList.remove('hidden');
+                uploadContent.classList.add('hidden');
+            }
+            imageDisplay.classList.add('hidden');
+            actionButtons.classList.add('hidden');
+            newImageBtn.classList.add('hidden');
+        } else if (phase === 'processing' || phase === 'done' || (phase === 'error' && this.originalImage)) {
+            // Show image whenever we have one (processing/done or error with original)
             uploadContent.classList.add('hidden');
-            
-            // Clear URL input when switching to URL tab
-            imageUrlInput.value = '';
+            urlContent.classList.add('hidden');
+            imageDisplay.classList.remove('hidden');
+            if (phase === 'done') {
+                actionButtons.classList.remove('hidden');
+                newImageBtn.classList.remove('hidden');
+            } else {
+                actionButtons.classList.add('hidden');
+                newImageBtn.classList.add('hidden');
+            }
+        } else if (phase === 'error' && !this.originalImage) {
+            // No image yet; show tab’s content to let user retry input
+            imageDisplay.classList.add('hidden');
+            actionButtons.classList.add('hidden');
+            newImageBtn.classList.add('hidden');
+            if (tab === 'file') {
+                uploadContent.classList.remove('hidden');
+                urlContent.classList.add('hidden');
+            } else {
+                urlContent.classList.remove('hidden');
+                uploadContent.classList.add('hidden');
+            }
         }
     }
 
-    showActionButtons() {
-        document.getElementById('actionButtons').classList.remove('hidden');
-        document.getElementById('newImageBtn').classList.remove('hidden');
+    switchTab(tab) {
+        if (this.isBusy()) return; // Prevent switching during busy states
+        const tabFile = document.getElementById('tabFile');
+        const tabUrl = document.getElementById('tabUrl');
+        const imageUrlInput = document.getElementById('imageUrlInput');
+
+        // Reset inputs and image when switching tabs but keep phase idle
+        this.reset();
+        if (tab === 'url') imageUrlInput.value = '';
+        this.setState({ tab, phase: 'idle' });
     }
-    
+
     showError(message, showRetry = false) {
         const errorEl = document.getElementById('errorMessage');
         const errorText = document.getElementById('errorText');
