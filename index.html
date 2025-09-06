@@ -75,6 +75,14 @@
                 <p class="text-gray-400 text-sm mt-3">We’ll download the image and process it. Some sites may block downloads. Supported types: jpg, png, webp.</p>
             </div>
             
+            <!-- Error Message (moved above image for visibility) -->
+            <div id="errorMessage" class="hidden mt-4 mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+                <p id="errorText"></p>
+                <button id="retryBtn" class="hidden mt-3 bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300">
+                    Try Again
+                </button>
+            </div>
+            
             <!-- Image Display -->
             <div id="imageDisplay" class="hidden">
                 <!-- Action buttons above image (hidden initially) -->
@@ -102,17 +110,9 @@
             <div id="processingOverlay" class="absolute inset-0 bg-white bg-opacity-90 rounded-2xl flex items-center justify-center hidden">
                 <div class="text-center">
                     <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                    <p class="text-gray-600 font-semibold">Adding sunglasses...</p>
+                    <p id="processingText" class="text-gray-600 font-semibold">Adding sunglasses...</p>
                 </div>
             </div>
-        </div>
-        
-        <!-- Error Message -->
-        <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
-            <p id="errorText"></p>
-            <button id="retryBtn" class="hidden mt-3 bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300">
-                Try Again
-            </button>
         </div>
         
         <!-- GitHub Link -->
