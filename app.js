@@ -18,6 +18,12 @@ class DealWithItApp {
         const newImageBtn = document.getElementById('newImageBtn');
         const retryBtn = document.getElementById('retryBtn');
         const apiKeyInput = document.getElementById('apiKey');
+        const tabFile = document.getElementById('tabFile');
+        const tabUrl = document.getElementById('tabUrl');
+        const urlContent = document.getElementById('urlContent');
+        const uploadContent = document.getElementById('uploadContent');
+        const fetchUrlBtn = document.getElementById('fetchUrlBtn');
+        const imageUrlInput = document.getElementById('imageUrlInput');
         
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
         uploadArea.addEventListener('click', () => {
@@ -26,7 +32,7 @@ class DealWithItApp {
                 // Check for API key before opening file picker
                 const apiKey = document.getElementById('apiKey').value;
                 if (!apiKey || !apiKey.trim()) {
-                    this.showValidationError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+                    this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
                     // Focus on API key input
                     document.getElementById('apiKey').focus();
                     return;
@@ -45,6 +51,28 @@ class DealWithItApp {
             this.saveApiKey();
             // Don't auto-hide errors when retry button is visible
             // Processing errors should only be dismissed by clicking "Try Again"
+        });
+
+        // Tabs
+        tabFile.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.switchTab('file');
+        });
+        tabUrl.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.switchTab('url');
+        });
+
+        // URL fetch
+        fetchUrlBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.handleUrlFetch(imageUrlInput.value);
+        });
+        imageUrlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.handleUrlFetch(imageUrlInput.value);
+            }
         });
     }
 
@@ -170,6 +198,61 @@ class DealWithItApp {
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
+    }
+
+    async handleUrlFetch(url) {
+        const apiKey = document.getElementById('apiKey').value;
+        if (!apiKey || !apiKey.trim()) {
+            this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+            return;
+        }
+        if (!url || !url.trim()) {
+            this.showError('Please enter an image URL.');
+            return;
+        }
+        try {
+            this.hideError();
+            this.showProcessingOverlay(true);
+
+            // Try to fetch the image as a blob
+            const response = await fetch(url, { mode: 'cors' });
+            if (!response.ok) {
+                throw new Error('Failed to fetch image from URL');
+            }
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.startsWith('image/')) {
+                throw new Error('URL does not point to an image');
+            }
+            const blob = await response.blob();
+
+            // Create an object URL and Image element
+            const objectUrl = URL.createObjectURL(blob);
+            await this.loadImageFromSrc(objectUrl);
+            
+            // Revoke object URL after image loads
+            URL.revokeObjectURL(objectUrl);
+
+            // Process while overlay remains visible; processing will hide it
+            await this.processImage();
+        } catch (error) {
+            console.error('URL fetch error:', error);
+            this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.');
+            this.showProcessingOverlay(false);
+        }
+    }
+
+    loadImageFromSrc(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                this.originalImage = img;
+                this.displayImage(src);
+                resolve();
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = src;
+        });
     }
     
     displayImage(imageSrc) {
@@ -333,6 +416,38 @@ class DealWithItApp {
             overlay.classList.remove('hidden');
         } else {
             overlay.classList.add('hidden');
+        }
+    }
+
+    switchTab(tab) {
+        const tabFile = document.getElementById('tabFile');
+        const tabUrl = document.getElementById('tabUrl');
+        const urlContent = document.getElementById('urlContent');
+        const uploadContent = document.getElementById('uploadContent');
+        const uploadArea = document.getElementById('uploadArea');
+
+        if (tab === 'file') {
+            // Style tabs
+            tabFile.classList.add('bg-white', 'shadow', 'text-gray-800');
+            tabFile.setAttribute('aria-selected', 'true');
+            tabUrl.classList.remove('bg-white', 'shadow', 'text-gray-800');
+            tabUrl.setAttribute('aria-selected', 'false');
+
+            // Show file upload, hide URL
+            uploadContent.classList.remove('hidden');
+            urlContent.classList.add('hidden');
+
+            // Restore pointer/hover for upload area
+            uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50');
+        } else {
+            tabUrl.classList.add('bg-white', 'shadow', 'text-gray-800');
+            tabUrl.setAttribute('aria-selected', 'true');
+            tabFile.classList.remove('bg-white', 'shadow', 'text-gray-800');
+            tabFile.setAttribute('aria-selected', 'false');
+
+            // Show URL input, hide file upload
+            urlContent.classList.remove('hidden');
+            uploadContent.classList.add('hidden');
         }
     }
 
