@@ -6,12 +6,13 @@
     <title>Deal With It</title>
     <meta name="description" content="Upload a photo and add the iconic sunglasses • Powered by Gemini 2.5 Flash Image">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😎</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Inter', sans-serif;
+            min-height: max(884px, 100dvh);
         }
         .drag-active {
             background: linear-gradient(45deg, rgba(139, 69, 19, 0.1), rgba(255, 20, 147, 0.1), rgba(255, 0, 0, 0.1));
@@ -29,117 +30,113 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 flex items-center justify-center min-h-screen">
-    <div class="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl w-full text-center">
-        <h1 class="text-5xl font-bold text-gray-800 mb-4">Deal With It 😎</h1>
-        <p class="text-gray-600 mb-2">Upload a photo to add the iconic sunglasses</p>
-        <p class="text-gray-500 text-sm mb-8">Powered by Gemini 2.5 Flash Image</p>
+<body class="bg-pink-500">
+    <div class="bg-white max-w-lg mx-auto my-8 rounded-xl shadow-lg p-6 sm:p-8">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-800">Deal With It 😎</h1>
+            <p class="text-gray-600 mt-2">Upload a photo to add the iconic sunglasses</p>
+            <p class="text-sm text-gray-500 mt-1">Powered by Gemini 2.5 Flash Image</p>
+        </div>
         
         <!-- API Key Section -->
-        <div class="mb-8">
-            <div class="flex items-center justify-center space-x-4 mb-2">
-                <input id="apiKey" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your Gemini API key" type="password">
-                <a class="text-indigo-600 font-semibold hover:underline whitespace-nowrap" href="https://aistudio.google.com/app/apikey" target="_blank">Get API Key</a>
+        <div class="mt-8">
+            <div class="relative">
+                <input id="apiKey" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your Gemini API key" type="password">
+                <a class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-600 font-semibold hover:text-indigo-800" href="https://aistudio.google.com/app/apikey" target="_blank">Get API Key</a>
             </div>
-            <p class="text-xs text-gray-500 text-center">🔒 API key connects directly to Google Gemini • Stored securely in your browser's local storage</p>
+            <p class="text-xs text-gray-500 mt-2 flex items-center">
+                <span class="material-icons text-sm mr-1">vpn_key</span>
+                API key connects directly to Google Gemini • Stored securely in your browser's local storage
+            </p>
         </div>
         
-        <!-- Tabs -->
-        <div class="mb-4">
+        <!-- Upload Tabs (Always visible) -->
+        <div id="uploadTabs" class="mt-8 mb-4">
             <div class="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 w-full max-w-md mx-auto" role="tablist">
-                <button id="tabFile" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white shadow text-gray-800 w-full text-center" data-tab="file" aria-selected="true">Upload File</button>
-                <button id="tabUrl" class="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:text-gray-800 w-full text-center" data-tab="url" aria-selected="false">From URL</button>
+                <button id="uploadFileBtn" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white shadow text-gray-800 w-full text-center" aria-selected="true">Upload File</button>
+                <button id="uploadUrlBtn" class="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:text-gray-800 w-full text-center" aria-selected="false">From URL</button>
             </div>
         </div>
         
-        <!-- Error Message (its own container above upload) -->
-        <div id="errorMessage" class="hidden mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg" role="alert" aria-live="polite">
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg" role="alert" aria-live="polite">
             <p id="errorText"></p>
-            <button id="retryBtn" class="hidden mt-3 bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-300">
-                Try Again
-            </button>
         </div>
 
-        <!-- Upload/Image Area -->
-        <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 mb-8 cursor-pointer hover:bg-gray-50 transition-colors duration-300 relative min-h-[320px] flex items-center justify-center">
-            <div class="flex flex-col items-center justify-center" id="uploadContent">
-                <span class="material-icons text-gray-400 text-6xl mb-4">
-                    cloud_upload
-                </span>
-                <p class="text-gray-500 mb-2">Drag & drop your photo here</p>
-                <p class="text-gray-400 text-sm mb-4">or paste from clipboard (Ctrl/⌘+V) or click anywhere</p>
-                <div class="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300">
-                    Choose File
-                </div>
-                <input class="hidden" id="imageInput" type="file" accept="image/*">
-            </div>
-
-            <!-- URL Upload Content -->
-            <div id="urlContent" class="hidden flex flex-col items-center justify-center">
-                <span class="material-icons text-gray-400 text-6xl mb-4">
-                    link
-                </span>
-                <p class="text-gray-500 mb-2">Enter image URL</p>
-                <p class="text-gray-400 text-sm mb-4">We'll download and process the image</p>
-                <input id="imageUrlInput" class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/image.jpg" type="url" inputmode="url">
-                <p class="text-gray-400 text-xs mt-3">Supported: jpg, png, webp • Some sites may block downloads</p>
-            </div>
-            <!-- Image Display -->
-            <div id="imageDisplay" class="hidden w-full">
-                <!-- Image -->
-                <img id="displayedImage" class="max-w-full h-auto rounded-lg mx-auto">
-                
-                <!-- Action buttons below image (hidden initially) -->
-                <div id="actionButtons" class="hidden flex justify-center space-x-3 mt-4">
-                    <button id="copyBtn" class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center space-x-2">
-                        <span class="material-icons text-sm">content_copy</span>
-                        <span>Copy</span>
-                    </button>
-                    <button id="downloadBtn" class="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-300 flex items-center space-x-2">
-                        <span class="material-icons text-sm">download</span>
-                        <span>Download</span>
-                    </button>
-                </div>
-                
-                <!-- Try another image button (hidden initially) -->
-                <button id="newImageBtn" class="hidden mt-4 bg-indigo-100 text-indigo-700 font-semibold px-6 py-2 rounded-lg hover:bg-indigo-200 transition-colors duration-300 border border-indigo-200">
-                    Try Another Image
+        <!-- Image Display Area (Hidden initially) -->
+        <div id="imageArea" class="mt-8 hidden">
+            <div class="w-full bg-white rounded-lg border border-gray-200 p-4 relative">
+                <img id="displayedImage" class="w-full h-auto rounded-md">
+                <!-- Change Image Button -->
+                <button id="changeImageBtn" class="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-white transition shadow-sm border border-gray-200">
+                    Change Image
                 </button>
             </div>
-            
-            <!-- Processing Overlay -->
-            <div id="processingOverlay" class="absolute inset-0 bg-white bg-opacity-90 rounded-2xl flex items-center justify-center hidden">
-                <div class="text-center">
-                    <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                    <p id="processingText" class="text-gray-600 font-semibold">Dealing with it...</p>
+        </div>
+
+        <!-- Upload Area -->
+        <div id="uploadArea" class="mt-4">
+            <!-- File Upload Content -->
+            <div id="fileUploadContent" class="w-full bg-white rounded-lg border border-gray-200 p-4">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-50 transition h-[240px] flex flex-col items-center justify-center">
+                    <span class="material-icons text-gray-400 text-5xl mb-3">cloud_upload</span>
+                    <p class="text-gray-600 mb-2">Drag & drop your photo here</p>
+                    <p class="text-gray-400 text-sm mb-4">or paste from clipboard (Ctrl/⌘+V) or click to browse</p>
+                    <div class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                        Choose File
+                    </div>
+                    <input class="hidden" id="imageInput" type="file" accept="image/*">
                 </div>
             </div>
+            
+            <!-- URL Upload Content -->
+            <div id="urlUploadContent" class="hidden w-full bg-white rounded-lg border border-gray-200 p-4">
+                <div class="text-center h-[240px] flex flex-col items-center justify-center">
+                    <span class="material-icons text-gray-400 text-5xl mb-3">link</span>
+                    <p class="text-gray-600 mb-2">Enter image URL</p>
+                    <p class="text-gray-400 text-sm mb-4">We'll download and process the image</p>
+                    <input id="imageUrlInput" class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4" placeholder="https://example.com/image.jpg" type="url">
+                    <button id="loadUrlBtn" class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                        Load Image
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons (hidden initially) -->
+        <div id="actionButtons" class="hidden mt-8 flex justify-center space-x-4">
+            <button id="copyBtn" class="flex items-center justify-center w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
+                <span class="material-icons mr-2">content_copy</span>
+                Copy
+            </button>
+            <button id="downloadBtn" class="flex items-center justify-center w-full py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                <span class="material-icons mr-2">download</span>
+                Download
+            </button>
         </div>
         
         <!-- Optional Prompt Field -->
-        <div class="mb-6">
-            <label for="additionalPrompt" class="block text-sm font-medium text-gray-700 mb-2">
+        <div class="mt-8">
+            <label for="additionalPrompt" class="block text-sm font-medium text-gray-700">
                 Additional Instructions (Optional)
             </label>
-            <textarea id="additionalPrompt" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" rows="3" placeholder="e.g., make the sunglasses gold, add a hat, change the background color..."></textarea>
+            <textarea id="additionalPrompt" class="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="4" placeholder="e.g., make the sunglasses gold, add a hat, change the background color..."></textarea>
         </div>
 
-        <!-- Unified Submit Button (always visible) -->
-        <div id="submitButtonContainer" class="mb-6 text-center sticky bottom-0 z-10 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-3 rounded-xl">
-            <button id="submitBtn" class="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 flex items-center justify-center mx-auto">
+        <!-- Submit Button -->
+        <div class="mt-8">
+            <button id="submitBtn" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                 Deal with it
             </button>
         </div>
-
-        <!-- Process Button removed in favor of unified Submit -->
         
         <!-- GitHub Link -->
-        <div class="mt-8 pt-6 border-t border-gray-200">
-            <a href="https://github.com/kevintraver/deal-with-it" target="_blank" class="text-gray-500 hover:text-gray-700 text-sm flex items-center justify-center space-x-2 transition-colors duration-300">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"></path>
+        <div class="mt-8 text-center">
+            <a href="https://github.com/kevintraver/deal-with-it" target="_blank" class="text-gray-500 hover:text-gray-700 flex items-center justify-center">
+                <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.578.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"></path>
                 </svg>
-                <span>kevintraver/deal-with-it</span>
+                kevintraver/deal-with-it
             </a>
         </div>
     </div>
