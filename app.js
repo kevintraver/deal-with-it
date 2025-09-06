@@ -27,7 +27,10 @@ class DealWithItApp {
         });
         copyBtn.addEventListener('click', () => this.copyImageToClipboard());
         downloadBtn.addEventListener('click', () => this.downloadImage());
-        newImageBtn.addEventListener('click', () => this.reset());
+        newImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent event bubbling to upload area
+            this.reset();
+        });
         apiKeyInput.addEventListener('input', () => this.saveApiKey());
     }
 
@@ -295,6 +298,7 @@ class DealWithItApp {
         document.getElementById('uploadContent').classList.remove('hidden');
         document.getElementById('imageDisplay').classList.add('hidden');
         document.getElementById('actionButtons').classList.add('hidden');
+        document.getElementById('newImageBtn').classList.add('hidden');
         document.getElementById('imageInput').value = '';
         
         // Restore upload area styling
@@ -317,6 +321,7 @@ class DealWithItApp {
 
     showActionButtons() {
         document.getElementById('actionButtons').classList.remove('hidden');
+        document.getElementById('newImageBtn').classList.remove('hidden');
     }
     
     showError(message) {
