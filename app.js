@@ -214,8 +214,9 @@ class DealWithItApp {
             this.hideError();
             this.showProcessingOverlay(true);
 
-            // Try to fetch the image as a blob
-            const response = await fetch(url, { mode: 'cors' });
+            // Try to fetch the image via our proxy to avoid CORS issues
+            const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error('Failed to fetch image from URL');
             }
