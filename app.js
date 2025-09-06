@@ -216,9 +216,13 @@ class DealWithItApp {
         }
         try {
             this.hideError();
-            this.showProcessingOverlay(true);
+            
+            // Show processing overlay and hide URL content properly
             const urlContent = document.getElementById('urlContent');
+            const uploadContent = document.getElementById('uploadContent');
             if (urlContent) urlContent.classList.add('hidden');
+            if (uploadContent) uploadContent.classList.add('hidden');
+            this.showProcessingOverlay(true);
 
             // Try to fetch the image via our proxy to avoid CORS issues
             const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(trimmedUrl)}`;
@@ -244,8 +248,12 @@ class DealWithItApp {
         } catch (error) {
             console.error('URL fetch error:', error);
             this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.', true);
+            
+            // Restore URL content on error and hide processing overlay
             const urlContent = document.getElementById('urlContent');
+            const uploadContent = document.getElementById('uploadContent');
             if (urlContent) urlContent.classList.remove('hidden');
+            if (uploadContent) uploadContent.classList.add('hidden');
             this.showProcessingOverlay(false);
         }
     }
@@ -265,8 +273,9 @@ class DealWithItApp {
     }
     
     displayImage(imageSrc) {
-        // Hide upload content and show image
+        // Hide both upload content and URL content when displaying image
         document.getElementById('uploadContent').classList.add('hidden');
+        document.getElementById('urlContent').classList.add('hidden');
         document.getElementById('imageDisplay').classList.remove('hidden');
         
         // Set the image source
@@ -406,10 +415,12 @@ class DealWithItApp {
         
         // Reset UI to initial state
         document.getElementById('uploadContent').classList.remove('hidden');
+        document.getElementById('urlContent').classList.add('hidden');
         document.getElementById('imageDisplay').classList.add('hidden');
         document.getElementById('actionButtons').classList.add('hidden');
         document.getElementById('newImageBtn').classList.add('hidden');
         document.getElementById('imageInput').value = '';
+        document.getElementById('imageUrlInput').value = '';
         
         // Restore upload area styling
         const uploadArea = document.getElementById('uploadArea');
@@ -417,6 +428,8 @@ class DealWithItApp {
         uploadArea.classList.remove('border-solid');
         uploadArea.classList.add('border-dashed');
         
+        // Hide processing overlay
+        this.showProcessingOverlay(false);
         this.hideError();
     }
     
@@ -435,6 +448,10 @@ class DealWithItApp {
         const urlContent = document.getElementById('urlContent');
         const uploadContent = document.getElementById('uploadContent');
         const uploadArea = document.getElementById('uploadArea');
+        const imageUrlInput = document.getElementById('imageUrlInput');
+
+        // Reset the form completely when switching tabs
+        this.reset();
 
         if (tab === 'file') {
             // Style tabs
@@ -458,6 +475,9 @@ class DealWithItApp {
             // Show URL input, hide file upload
             urlContent.classList.remove('hidden');
             uploadContent.classList.add('hidden');
+            
+            // Clear URL input when switching to URL tab
+            imageUrlInput.value = '';
         }
     }
 
