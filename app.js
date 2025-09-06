@@ -6,8 +6,9 @@ class DealWithItApp {
         this.errorMessage = null;
 
         // Centralized UI state
-        // phase: idle | fetchingUrl | processing | done | error
+        // phase: idle | fetchingUrl | processing | done | error  
         // tab: file | url
+        // Always start with file tab to ensure consistent state
         this.state = { phase: 'idle', tab: 'file' };
         
         this.initializeEventListeners();
@@ -32,9 +33,8 @@ class DealWithItApp {
         const tabUrl = document.getElementById('tabUrl');
         const urlContent = document.getElementById('urlContent');
         const uploadContent = document.getElementById('uploadContent');
-        const fetchUrlBtn = document.getElementById('fetchUrlBtn');
+        const submitBtn = document.getElementById('submitBtn');
         const imageUrlInput = document.getElementById('imageUrlInput');
-        const processBtn = document.getElementById('processBtn');
         
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
         uploadArea.addEventListener('click', () => {
@@ -51,11 +51,21 @@ class DealWithItApp {
                 imageInput.click();
             }
         });
-        copyBtn.addEventListener('click', () => this.copyImageToClipboard());
-        downloadBtn.addEventListener('click', () => this.downloadImage());
+        copyBtn.addEventListener('click', () => {
+            if (!copyBtn.hasAttribute('disabled')) {
+                this.copyImageToClipboard();
+            }
+        });
+        downloadBtn.addEventListener('click', () => {
+            if (!downloadBtn.hasAttribute('disabled')) {
+                this.downloadImage();
+            }
+        });
         newImageBtn.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent event bubbling to upload area
-            this.reset();
+            if (!newImageBtn.hasAttribute('disabled')) {
+                this.reset();
+            }
         });
         retryBtn.addEventListener('click', () => this.retryProcessing());
         apiKeyInput.addEventListener('input', () => {
@@ -74,11 +84,39 @@ class DealWithItApp {
             this.switchTab('url');
         });
 
-        // URL fetch
-        fetchUrlBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.handleUrlFetch(imageUrlInput.value);
-        });
+        // Unified submit behavior
+        if (submitBtn) {
+            submitBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this.isBusy()) return;
+                const apiKey = document.getElementById('apiKey').value;
+                if (!apiKey || !apiKey.trim()) {
+                    this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+                    document.getElementById('apiKey').focus();
+                    return;
+                }
+                // If an image is already loaded, submit means process
+                if (this.state.phase === 'imageLoaded' && this.originalImage) {
+                    this.processImage();
+                    return;
+                }
+                // Otherwise branch by tab
+                if (this.state.tab === 'file') {
+                    // Trigger file picker
+                    imageInput.click();
+                    return;
+                }
+                if (this.state.tab === 'url') {
+                    const url = imageUrlInput.value;
+                    if (!url || !url.trim()) {
+                        this.showError('Please enter an image URL.');
+                        imageUrlInput.focus();
+                        return;
+                    }
+                    this.handleUrlFetch(url);
+                }
+            });
+        }
         imageUrlInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -86,18 +124,14 @@ class DealWithItApp {
             }
         });
 
-        // Process button
-        processBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.processImage();
-        });
+        // Process button removed (unified submit handles processing)
 
         // Enter key submission for additional prompt
         const additionalPrompt = document.getElementById('additionalPrompt');
         additionalPrompt.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
-                // Enter without Shift submits (if image is loaded)
-                if (this.state.phase === 'imageLoaded') {
+                // Enter without Shift submits (if image is loaded and not busy)
+                if (this.state.phase === 'imageLoaded' && !this.isBusy() && this.originalImage) {
                     e.preventDefault();
                     this.processImage();
                 }
@@ -156,6 +190,8 @@ class DealWithItApp {
     }
 
     async handlePaste(e) {
+        // Only handle image paste on the File tab; let normal text paste elsewhere
+        if (this.isBusy() || this.state.tab !== 'file') return;
         const items = e.clipboardData?.items;
         if (!items) return;
 
@@ -221,6 +257,11 @@ class DealWithItApp {
                 this.setDisplayedImage(e.target.result);
                 // Show the process button instead of auto-processing
                 this.setState({ phase: 'imageLoaded' });
+                // Focus on additional prompt field for convenience
+                setTimeout(() => {
+                    const promptField = document.getElementById('additionalPrompt');
+                    if (promptField) promptField.focus();
+                }, 100);
             };
             img.src = e.target.result;
         };
@@ -268,6 +309,11 @@ class DealWithItApp {
 
             // Show the process button instead of auto-processing
             this.setState({ phase: 'imageLoaded' });
+            // Focus on additional prompt field for convenience
+            setTimeout(() => {
+                const promptField = document.getElementById('additionalPrompt');
+                if (promptField) promptField.focus();
+            }, 100);
         } catch (error) {
             console.error('URL fetch error:', error);
             this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.', true);
@@ -468,7 +514,7 @@ class DealWithItApp {
         const uploadArea = document.getElementById('uploadArea');
         const tabFile = document.getElementById('tabFile');
         const tabUrl = document.getElementById('tabUrl');
-        const fetchUrlBtn = document.getElementById('fetchUrlBtn');
+        const submitBtnEl = document.getElementById('submitBtn');
 
         // Tabs styling/selection
         if (tab === 'file') {
@@ -489,14 +535,20 @@ class DealWithItApp {
             if (this.isBusy()) el.classList.add(...disableCls); else el.classList.remove(...disableCls);
         });
 
-        // Upload area pointer/hover
+        // Upload area pointer/hover and consistent idle height
         if (phase === 'idle') {
-            uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50', 'border-dashed');
+            uploadArea.classList.add('cursor-pointer', 'hover:bg-gray-50', 'border-dashed', 'flex', 'items-center', 'justify-center', 'h-[380px]');
             uploadArea.classList.remove('border-solid');
             uploadArea.classList.remove('pointer-events-none');
         } else {
-            uploadArea.classList.remove('cursor-pointer', 'hover:bg-gray-50', 'border-dashed');
+            uploadArea.classList.remove('cursor-pointer', 'hover:bg-gray-50', 'border-dashed', 'h-[380px]');
             uploadArea.classList.add('border-solid');
+            // Keep flex centering for images
+            if (phase === 'imageLoaded' || phase === 'processing' || phase === 'done') {
+                uploadArea.classList.add('flex', 'items-center', 'justify-center');
+            } else {
+                uploadArea.classList.remove('flex', 'items-center', 'justify-center');
+            }
             // Only block interactions on the area while busy; allow buttons in done/error
             if (this.isBusy()) {
                 uploadArea.classList.add('pointer-events-none');
@@ -505,14 +557,14 @@ class DealWithItApp {
             }
         }
 
-        // Fetch button disabled state during busy
-        if (fetchUrlBtn) {
+        // Submit button disabled state during busy
+        if (submitBtnEl) {
             if (this.isBusy()) {
-                fetchUrlBtn.setAttribute('disabled', 'true');
-                fetchUrlBtn.classList.add('opacity-50', 'pointer-events-none');
+                submitBtnEl.setAttribute('disabled', 'true');
+                submitBtnEl.classList.add('opacity-50', 'pointer-events-none');
             } else {
-                fetchUrlBtn.removeAttribute('disabled');
-                fetchUrlBtn.classList.remove('opacity-50', 'pointer-events-none');
+                submitBtnEl.removeAttribute('disabled');
+                submitBtnEl.classList.remove('opacity-50', 'pointer-events-none');
             }
         }
 
@@ -544,12 +596,30 @@ class DealWithItApp {
             uploadContent.classList.add('hidden');
             urlContent.classList.add('hidden');
             imageDisplay.classList.remove('hidden');
-            if (phase === 'done') {
-                actionButtons.classList.remove('hidden');
-                newImageBtn.classList.remove('hidden');
+            
+            // Always show action buttons but disable during processing
+            actionButtons.classList.remove('hidden');
+            newImageBtn.classList.remove('hidden');
+            
+            // Disable/enable buttons based on phase
+            const copyBtn = document.getElementById('copyBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            if (phase === 'processing') {
+                // Disable buttons during processing
+                [copyBtn, downloadBtn, newImageBtn].forEach(btn => {
+                    if (btn) {
+                        btn.setAttribute('disabled', 'true');
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                });
             } else {
-                actionButtons.classList.add('hidden');
-                newImageBtn.classList.add('hidden');
+                // Enable buttons when done or error
+                [copyBtn, downloadBtn, newImageBtn].forEach(btn => {
+                    if (btn) {
+                        btn.removeAttribute('disabled');
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                });
             }
         } else if (phase === 'error' && !this.originalImage) {
             // No image yet; show tab’s content to let user retry input
@@ -565,25 +635,7 @@ class DealWithItApp {
             }
         }
 
-        // Process button visibility
-        const processButtonContainer = document.getElementById('processButtonContainer');
-        if (processButtonContainer) {
-            if (phase === 'imageLoaded') {
-                processButtonContainer.classList.remove('hidden');
-            } else {
-                processButtonContainer.classList.add('hidden');
-            }
-        }
-
-        // Fetch button visibility
-        const fetchButtonContainer = document.getElementById('fetchButtonContainer');
-        if (fetchButtonContainer) {
-            if (phase === 'idle' && tab === 'url') {
-                fetchButtonContainer.classList.remove('hidden');
-            } else {
-                fetchButtonContainer.classList.add('hidden');
-            }
-        }
+        // Unified submit container is always visible; no per-phase visibility toggles
     }
 
     switchTab(tab) {
@@ -596,6 +648,16 @@ class DealWithItApp {
         this.reset();
         if (tab === 'url') imageUrlInput.value = '';
         this.setState({ tab, phase: 'idle' });
+
+        // Auto-focus URL input when switching to URL tab (after render)
+        if (tab === 'url') {
+            setTimeout(() => {
+                const urlInput = document.getElementById('imageUrlInput');
+                if (urlInput) urlInput.focus();
+            }, 60);
+        }
+
+        // No tab-specific visibility needed for submit button
     }
 
     showError(message, showRetry = false) {
