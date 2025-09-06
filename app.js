@@ -7,6 +7,7 @@ class DealWithItApp {
         this.loadSavedApiKey();
         this.setupDragAndDrop();
         this.setupGlobalDragAndDrop();
+        this.setupClipboardPaste();
     }
 
     initializeEventListeners() {
@@ -66,6 +67,28 @@ class DealWithItApp {
 
         // Handle file drop on entire document
         document.addEventListener('drop', this.handleGlobalDrop.bind(this), false);
+    }
+
+    setupClipboardPaste() {
+        // Listen for paste events on the document
+        document.addEventListener('paste', this.handlePaste.bind(this));
+    }
+
+    async handlePaste(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        // Look for image in clipboard
+        for (let item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    this.handleImageFile(file);
+                }
+                break;
+            }
+        }
     }
 
     preventDefaults(e) {
