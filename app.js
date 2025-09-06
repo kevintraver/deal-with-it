@@ -12,12 +12,19 @@ class DealWithItApp {
 
     initializeEventListeners() {
         const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
         const copyBtn = document.getElementById('copyBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const newImageBtn = document.getElementById('newImageBtn');
         const apiKeyInput = document.getElementById('apiKey');
         
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        uploadArea.addEventListener('click', () => {
+            // Only trigger if upload content is visible (not when image is displayed)
+            if (!document.getElementById('uploadContent').classList.contains('hidden')) {
+                imageInput.click();
+            }
+        });
         copyBtn.addEventListener('click', () => this.copyImageToClipboard());
         downloadBtn.addEventListener('click', () => this.downloadImage());
         newImageBtn.addEventListener('click', () => this.reset());
