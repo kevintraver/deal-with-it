@@ -34,6 +34,7 @@ class DealWithItApp {
         const uploadContent = document.getElementById('uploadContent');
         const fetchUrlBtn = document.getElementById('fetchUrlBtn');
         const imageUrlInput = document.getElementById('imageUrlInput');
+        const processBtn = document.getElementById('processBtn');
         
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
         uploadArea.addEventListener('click', () => {
@@ -82,6 +83,24 @@ class DealWithItApp {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this.handleUrlFetch(imageUrlInput.value);
+            }
+        });
+
+        // Process button
+        processBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.processImage();
+        });
+
+        // Enter key submission for additional prompt
+        const additionalPrompt = document.getElementById('additionalPrompt');
+        additionalPrompt.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                // Enter without Shift submits (if image is loaded)
+                if (this.state.phase === 'imageLoaded') {
+                    e.preventDefault();
+                    this.processImage();
+                }
             }
         });
     }
@@ -200,9 +219,8 @@ class DealWithItApp {
             img.onload = () => {
                 this.originalImage = img;
                 this.setDisplayedImage(e.target.result);
-                // Immediately enter processing state to avoid flashing
-                this.setState({ phase: 'processing' });
-                this.processImage();
+                // Show the process button instead of auto-processing
+                this.setState({ phase: 'imageLoaded' });
             };
             img.src = e.target.result;
         };
@@ -248,10 +266,8 @@ class DealWithItApp {
             // Revoke object URL after image loads
             URL.revokeObjectURL(objectUrl);
 
-            // Transition to processing and continue
-            this.setState({ phase: 'processing' });
-            this.setProcessingText('Adding sunglasses...');
-            await this.processImage();
+            // Show the process button instead of auto-processing
+            this.setState({ phase: 'imageLoaded' });
         } catch (error) {
             console.error('URL fetch error:', error);
             this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.', true);
@@ -287,7 +303,7 @@ class DealWithItApp {
         }
         
         this.setState({ phase: 'processing' });
-        this.setProcessingText('Adding sunglasses...');
+        this.setProcessingText('Dealing with it...');
         this.hideError();
         
         try {
@@ -299,6 +315,15 @@ class DealWithItApp {
             ctx.drawImage(this.originalImage, 0, 0);
             const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
             
+            // Get additional prompt if provided
+            const additionalPrompt = document.getElementById('additionalPrompt').value.trim();
+            let promptText = `Add cool "Deal With It" sunglasses to the person's face in this image. Make the sunglasses black and stylish, positioned perfectly over their eyes. Also add the text "DEAL WITH IT" at the bottom of the image in bold white letters with a black outline. Keep everything else in the image exactly the same - only add the sunglasses and text.`;
+            
+            // Append additional instructions if provided
+            if (additionalPrompt) {
+                promptText += ` Additional instructions: ${additionalPrompt}`;
+            }
+            
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: {
@@ -308,7 +333,7 @@ class DealWithItApp {
                     contents: [{
                         parts: [
                             {
-                                text: `Add cool "Deal With It" sunglasses to the person's face in this image. Make the sunglasses black and stylish, positioned perfectly over their eyes. Also add the text "DEAL WITH IT" at the bottom of the image in bold white letters with a black outline. Keep everything else in the image exactly the same - only add the sunglasses and text.`
+                                text: promptText
                             },
                             {
                                 inline_data: {
@@ -411,6 +436,7 @@ class DealWithItApp {
         // Clear inputs
         document.getElementById('imageInput').value = '';
         document.getElementById('imageUrlInput').value = '';
+        document.getElementById('additionalPrompt').value = '';
         // Reset UI state, keeping current tab
         this.setState({ phase: 'idle' });
         this.hideError();
@@ -423,7 +449,7 @@ class DealWithItApp {
 
     setProcessingText(text) {
         const el = document.getElementById('processingText');
-        if (el) el.textContent = text || 'Adding sunglasses...';
+        if (el) el.textContent = text || 'Dealing with it...';
     }
 
     setState(next) {
@@ -506,6 +532,13 @@ class DealWithItApp {
             imageDisplay.classList.add('hidden');
             actionButtons.classList.add('hidden');
             newImageBtn.classList.add('hidden');
+        } else if (phase === 'imageLoaded') {
+            // Show image with process button
+            uploadContent.classList.add('hidden');
+            urlContent.classList.add('hidden');
+            imageDisplay.classList.remove('hidden');
+            actionButtons.classList.add('hidden');
+            newImageBtn.classList.add('hidden');
         } else if (phase === 'processing' || phase === 'done' || (phase === 'error' && this.originalImage)) {
             // Show image whenever we have one (processing/done or error with original)
             uploadContent.classList.add('hidden');
@@ -529,6 +562,26 @@ class DealWithItApp {
             } else {
                 urlContent.classList.remove('hidden');
                 uploadContent.classList.add('hidden');
+            }
+        }
+
+        // Process button visibility
+        const processButtonContainer = document.getElementById('processButtonContainer');
+        if (processButtonContainer) {
+            if (phase === 'imageLoaded') {
+                processButtonContainer.classList.remove('hidden');
+            } else {
+                processButtonContainer.classList.add('hidden');
+            }
+        }
+
+        // Fetch button visibility
+        const fetchButtonContainer = document.getElementById('fetchButtonContainer');
+        if (fetchButtonContainer) {
+            if (phase === 'idle' && tab === 'url') {
+                fetchButtonContainer.classList.remove('hidden');
+            } else {
+                fetchButtonContainer.classList.add('hidden');
             }
         }
     }
