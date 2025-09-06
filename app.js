@@ -2,6 +2,7 @@ class DealWithItApp {
     constructor() {
         this.originalImage = null;
         this.processedImageUrl = null;
+        this.lastUrlAttempt = null;
         
         this.initializeEventListeners();
         this.loadSavedApiKey();
@@ -202,20 +203,25 @@ class DealWithItApp {
 
     async handleUrlFetch(url) {
         const apiKey = document.getElementById('apiKey').value;
+        const trimmedUrl = (url || '').trim();
+        this.lastUrlAttempt = trimmedUrl || null;
         if (!apiKey || !apiKey.trim()) {
-            this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.');
+            this.showError('Please enter your Gemini API key first to process images. You can get one for free from Google AI Studio.', true);
+            document.getElementById('apiKey').focus();
             return;
         }
-        if (!url || !url.trim()) {
+        if (!trimmedUrl) {
             this.showError('Please enter an image URL.');
             return;
         }
         try {
             this.hideError();
             this.showProcessingOverlay(true);
+            const urlContent = document.getElementById('urlContent');
+            if (urlContent) urlContent.classList.add('hidden');
 
             // Try to fetch the image via our proxy to avoid CORS issues
-            const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+            const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(trimmedUrl)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) {
                 throw new Error('Failed to fetch image from URL');
@@ -237,7 +243,9 @@ class DealWithItApp {
             await this.processImage();
         } catch (error) {
             console.error('URL fetch error:', error);
-            this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.');
+            this.showError(error.message || 'Failed to fetch image from URL. Some sites may block downloads.', true);
+            const urlContent = document.getElementById('urlContent');
+            if (urlContent) urlContent.classList.remove('hidden');
             this.showProcessingOverlay(false);
         }
     }
@@ -394,6 +402,7 @@ class DealWithItApp {
     reset() {
         this.originalImage = null;
         this.processedImageUrl = null;
+        this.lastUrlAttempt = null;
         
         // Reset UI to initial state
         document.getElementById('uploadContent').classList.remove('hidden');
@@ -465,7 +474,7 @@ class DealWithItApp {
         errorText.textContent = message;
         errorEl.classList.remove('hidden');
         
-        if (showRetry && this.originalImage) {
+        if (showRetry && (this.originalImage || this.lastUrlAttempt)) {
             retryBtn.classList.remove('hidden');
         } else {
             retryBtn.classList.add('hidden');
@@ -478,9 +487,13 @@ class DealWithItApp {
     }
 
     retryProcessing() {
+        this.hideError();
         if (this.originalImage) {
-            this.hideError();
             this.processImage();
+            return;
+        }
+        if (this.lastUrlAttempt) {
+            this.handleUrlFetch(this.lastUrlAttempt);
         }
     }
 
