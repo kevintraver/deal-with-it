@@ -243,6 +243,74 @@ class DealWithItApp {
     reader.readAsDataURL(file)
   }
 
+  // Downscale and compress image to stay within safe limits for the API
+  async prepareImageForApi(image) {
+    // Prefer JPEG for widest compatibility and small size
+    const preferredMimeType = 'image/jpeg'
+    const maximumSideLength = 3000 // Cap longest side to reduce megapixels
+    const maximumBytes = 6 * 1024 * 1024 // Aim under 6MB
+
+    // Compute target dimensions while preserving aspect ratio
+    const originalWidth = image.naturalWidth || image.width
+    const originalHeight = image.naturalHeight || image.height
+    let targetWidth = originalWidth
+    let targetHeight = originalHeight
+
+    const longestSide = Math.max(originalWidth, originalHeight)
+    if (longestSide > maximumSideLength) {
+      const scale = maximumSideLength / longestSide
+      targetWidth = Math.round(originalWidth * scale)
+      targetHeight = Math.round(originalHeight * scale)
+    }
+
+    // Helper to encode canvas to base64 and return size
+    const encodeWithQuality = (canvas, quality) => {
+      const dataUrl = canvas.toDataURL(preferredMimeType, quality)
+      const base64 = dataUrl.split(',')[1]
+      const sizeBytes = this.#estimateBase64SizeBytes(base64)
+      return { base64, sizeBytes }
+    }
+
+    // Create canvas and draw the image
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    canvas.width = targetWidth
+    canvas.height = targetHeight
+    ctx.drawImage(image, 0, 0, targetWidth, targetHeight)
+
+    // Iteratively reduce quality and potentially downscale further to fit size
+    let quality = 0.9
+    let { base64, sizeBytes } = encodeWithQuality(canvas, quality)
+
+    let iteration = 0
+    while (sizeBytes > maximumBytes && iteration < 8) {
+      iteration += 1
+
+      if (quality > 0.5) {
+        quality -= 0.15
+      } else {
+        // If already low quality, reduce dimensions by 20% and reset quality a bit higher
+        targetWidth = Math.max(512, Math.round(targetWidth * 0.8))
+        targetHeight = Math.max(512, Math.round(targetHeight * 0.8))
+        canvas.width = targetWidth
+        canvas.height = targetHeight
+        ctx.drawImage(image, 0, 0, targetWidth, targetHeight)
+        quality = 0.75
+      }
+      ;({ base64, sizeBytes } = encodeWithQuality(canvas, quality))
+    }
+
+    return { base64Data: base64, mimeType: preferredMimeType }
+  }
+
+  // Estimate decoded size of base64 image (without data URL header)
+  #estimateBase64SizeBytes(base64) {
+    // Base64 size formula: bytes = (len * 3/4) - padding
+    const len = base64.length
+    const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0
+    return (len * 3) / 4 - padding
+  }
+
   async handleUrlLoad() {
     const urlInput = document.getElementById('imageUrlInput')
     const url = urlInput.value.trim()
@@ -393,14 +461,10 @@ class DealWithItApp {
       // Update tab display to show disabled state
       this.updateTabDisplay()
 
-      // Create canvas and get base64
-      const canvas = document.createElement('canvas')
-      canvas.width = this.originalImage.width
-      canvas.height = this.originalImage.height
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(this.originalImage, 0, 0)
-
-      const imageData = canvas.toDataURL('image/jpeg').split(',')[1]
+      // Prepare image for API (downscale + quality control)
+      const { base64Data, mimeType } = await this.prepareImageForApi(
+        this.originalImage
+      )
 
       // Build prompt
       let promptText = `Add the iconic "Deal With It" sunglasses to the person's face in this image. Make the sunglasses black and stylish, positioned perfectly over their eyes and adjusted to match the shape of their face, the angle of their head, and the perspective of the photo. The sunglasses should align naturally with their facial orientation and viewing direction. Also add the text "DEAL WITH IT" at the bottom of the image in bold white letters with a black outline. Keep everything else in the image exactly the same - only add the sunglasses and text.`
@@ -422,8 +486,8 @@ class DealWithItApp {
                   { text: promptText },
                   {
                     inline_data: {
-                      mime_type: 'image/jpeg',
-                      data: imageData
+                      mime_type: mimeType,
+                      data: base64Data
                     }
                   }
                 ]
@@ -444,18 +508,28 @@ class DealWithItApp {
 
       const data = await response.json()
 
-      // Find the image part in the response
-      const imagePart = data.candidates[0].content.parts.find(
-        (part) => part.inlineData
+      // Find the image part in the response (handle snake_case and camelCase)
+      const parts = data?.candidates?.[0]?.content?.parts || []
+      const imagePart = parts.find(
+        (part) => part.inlineData || part.inline_data
       )
 
       if (!imagePart) {
-        throw new Error('No image returned from Gemini')
+        // Try to surface any text response as a helpful error
+        const textPart = parts.find((part) => part.text)
+        const finishReason = data?.candidates?.[0]?.finishReason
+        const reasonText = finishReason ? ` (reason: ${finishReason})` : ''
+        const message =
+          textPart?.text?.trim() ||
+          data?.promptFeedback?.blockReason ||
+          'No image returned from Gemini'
+        throw new Error(`${message}${reasonText}`)
       }
 
       // Convert base64 to image and display
-      const processedBase64 = imagePart.inlineData.data
-      const processedUrl = `data:${imagePart.inlineData.mimeType};base64,${processedBase64}`
+      const inline = imagePart.inlineData || imagePart.inline_data
+      const processedBase64 = inline.data
+      const processedUrl = `data:${inline.mimeType || inline.mime_type};base64,${processedBase64}`
 
       this.processedImageUrl = processedUrl
       document.getElementById('displayedImage').src = processedUrl
