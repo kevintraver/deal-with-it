@@ -487,19 +487,62 @@ class DealWithItApp {
   }
 
   async copyImageToClipboard() {
+    const copyBtn = document.getElementById('copyBtn')
+    const originalHTML = copyBtn.innerHTML
+    
     try {
       const imgSrc =
         this.processedImageUrl || document.getElementById('displayedImage').src
-      const response = await fetch(imgSrc)
-      const blob = await response.blob()
+      
+      // Check if we're on iOS/iPhone
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      
+      if (isIOS) {
+        // For iOS, create a temporary canvas and try to copy as image
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+          img.src = imgSrc
+        })
+        
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        
+        // Convert to blob
+        const blob = await new Promise(resolve => {
+          canvas.toBlob(resolve, 'image/png')
+        })
+        
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.write) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ])
+          } catch (clipboardError) {
+            // If clipboard API fails on iOS, show helpful message
+            throw new Error('To copy on iPhone: tap and hold the image, then select "Copy"')
+          }
+        } else {
+          throw new Error('To copy on iPhone: tap and hold the image, then select "Copy"')
+        }
+      } else {
+        // For other browsers, use the standard approach
+        const response = await fetch(imgSrc)
+        const blob = await response.blob()
 
-      await navigator.clipboard.write([
-        new ClipboardItem({ [blob.type]: blob })
-      ])
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type]: blob })
+        ])
+      }
 
       // Show success feedback
-      const copyBtn = document.getElementById('copyBtn')
-      const originalHTML = copyBtn.innerHTML
       copyBtn.innerHTML =
         '<span class="material-icons mr-2">check</span>Copied!'
       copyBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700')
@@ -512,7 +555,13 @@ class DealWithItApp {
       }, 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
-      this.showError('Failed to copy image to clipboard')
+      
+      // Show user-friendly error message
+      if (error.message.includes('iPhone') || error.message.includes('Copy')) {
+        this.showError(error.message)
+      } else {
+        this.showError('Copy not supported. Try downloading the image instead.')
+      }
     }
   }
 
