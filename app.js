@@ -8,6 +8,7 @@ class DealWithItApp {
 
     this.initializeEventListeners()
     this.loadSavedApiKey()
+    this.applyUrlParams()
     this.setupDragAndDrop()
     this.setupClipboardPaste()
     this.updateSubmitButtonState()
@@ -656,6 +657,35 @@ class DealWithItApp {
       localStorage.setItem('gemini_api_key', apiKey)
     } else {
       localStorage.removeItem('gemini_api_key')
+    }
+  }
+
+  // Read URL params and auto-populate sensitive fields like API key
+  applyUrlParams() {
+    try {
+      const url = new URL(window.location.href)
+      const params = url.searchParams
+
+      // Support a few common parameter names
+      const apiKeyParam =
+        params.get('apiKey') || params.get('apikey') || params.get('key')
+
+      if (apiKeyParam) {
+        const apiKeyInput = document.getElementById('apiKey')
+        apiKeyInput.value = apiKeyParam
+        this.saveApiKey()
+        this.updateSubmitButtonState()
+
+        // Remove sensitive params from the address bar without reloading
+        ;['apiKey', 'apikey', 'key'].forEach((k) => params.delete(k))
+        const cleanedSearch = params.toString()
+        const newUrl = cleanedSearch
+          ? `${url.pathname}?${cleanedSearch}${url.hash}`
+          : `${url.pathname}${url.hash}`
+        window.history.replaceState({}, '', newUrl)
+      }
+    } catch (e) {
+      // Silently ignore if URL parsing fails (e.g., non-standard environments)
     }
   }
 }

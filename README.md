@@ -23,6 +23,18 @@ A modern web app that automatically adds the iconic "Deal With It" sunglasses to
 4. **Auto-Magic**: The app automatically adds sunglasses and "DEAL WITH IT" text
 5. **Share**: Copy to clipboard or download the result
 
+### Shareable Links (Auto-fill API Key)
+
+You can prefill the API key via URL parameters so non-technical folks can just click a link:
+
+- Use any of: `apiKey`, `apikey`, or `key`
+- Example: `https://your-domain.com/?apiKey=YOUR_GEMINI_API_KEY`
+
+Notes:
+- The app saves the provided key to the browser's local storage.
+- For safety, the key is removed from the URL bar immediately after loading (using `history.replaceState`).
+- Passing secrets in URLs can still appear in browser history or server logs. Share with caution.
+
 ## Tech Stack
 
 - **Frontend**: Vanilla HTML5, CSS3 (Tailwind), JavaScript
