@@ -442,6 +442,7 @@ class DealWithItApp {
     this.updateSubmitButtonState()
     this.updateTabDisplay()
     this.hideError()
+    this.hideGeminiMessage()
   }
 
   async processImage() {
@@ -458,6 +459,10 @@ class DealWithItApp {
       this.showError('Please upload an image first')
       return
     }
+    
+    // Hide any previous messages
+    this.hideError()
+    this.hideGeminiMessage()
 
     const submitBtn = document.getElementById('submitBtn')
     const originalText = submitBtn.textContent
@@ -533,14 +538,35 @@ class DealWithItApp {
       )
 
       if (!imagePart) {
-        // Try to surface any text response as a helpful error
+        // Try to surface any text response as a helpful message
         const textPart = parts.find((part) => part.text)
+        
+        if (textPart?.text) {
+          // Gemini returned an explanation instead of an image
+          // Show this in a special info message instead of error
+          this.showGeminiMessage(textPart.text.trim())
+          
+          // Clear processing state
+          this.isProcessing = false
+          
+          // Hide processing overlay
+          if (processingOverlay) {
+            processingOverlay.classList.add('hidden')
+          }
+          
+          // Reset submit button
+          submitBtn.textContent = originalText
+          submitBtn.disabled = false
+          
+          // Update tab display to remove disabled state
+          this.updateTabDisplay()
+          return
+        }
+        
+        // No text explanation, show generic error
         const finishReason = data?.candidates?.[0]?.finishReason
         const reasonText = finishReason ? ` (reason: ${finishReason})` : ''
-        const message =
-          textPart?.text?.trim() ||
-          data?.promptFeedback?.blockReason ||
-          'No image returned from Gemini'
+        const message = data?.promptFeedback?.blockReason || 'No image returned from Gemini'
         throw new Error(`${message}${reasonText}`)
       }
 
@@ -733,6 +759,36 @@ class DealWithItApp {
 
   hideError() {
     document.getElementById('errorMessage').classList.add('hidden')
+  }
+
+  showGeminiMessage(message) {
+    // Hide any existing error message first
+    this.hideError()
+    
+    // Check if we have a Gemini message div, if not create one
+    let geminiDiv = document.getElementById('geminiMessage')
+    if (!geminiDiv) {
+      // Create the Gemini message div if it doesn't exist
+      const errorDiv = document.getElementById('errorMessage')
+      geminiDiv = document.createElement('div')
+      geminiDiv.id = 'geminiMessage'
+      geminiDiv.className = 'hidden mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg'
+      geminiDiv.innerHTML = '<p id="geminiText"></p>'
+      errorDiv.parentNode.insertBefore(geminiDiv, errorDiv.nextSibling)
+    }
+    
+    const geminiText = document.getElementById('geminiText')
+    geminiText.textContent = message
+    geminiDiv.classList.remove('hidden')
+    
+    // Don't auto-hide these messages - let user read them
+  }
+  
+  hideGeminiMessage() {
+    const geminiDiv = document.getElementById('geminiMessage')
+    if (geminiDiv) {
+      geminiDiv.classList.add('hidden')
+    }
   }
 
   loadSavedApiKey() {
