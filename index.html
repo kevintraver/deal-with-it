@@ -28,6 +28,9 @@
             pointer-events: none;
             z-index: 1000;
         }
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="bg-pink-500">
@@ -38,16 +41,32 @@
             <p class="text-sm text-gray-500 mt-1">Powered by Gemini 2.5 Flash Image</p>
         </div>
         
-        <!-- API Key Section -->
+        <!-- API Key Section (Collapsible) -->
         <div class="mt-8">
-            <div class="flex gap-3">
-                <input id="apiKey" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your Gemini API key" type="password">
-                <a class="px-4 py-3 text-gray-600 font-medium hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition whitespace-nowrap" href="https://aistudio.google.com/app/apikey" target="_blank">Get API Key</a>
+            <div id="apiKeySection" class="border border-gray-200 rounded-lg overflow-hidden">
+                <!-- Collapsed Header -->
+                <button id="apiKeyToggle" class="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition flex items-center justify-between text-left">
+                    <div class="flex items-center gap-2">
+                        <span class="material-icons text-gray-600 text-sm">vpn_key</span>
+                        <span class="font-medium text-gray-700">API Key</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="apiKeyStatus" class="material-icons hidden text-green-600 text-sm">lock</span>
+                        <span id="expandIcon" class="material-icons text-gray-400 text-sm transition-transform">expand_more</span>
+                    </div>
+                </button>
+                
+                <!-- Expandable Content -->
+                <div id="apiKeyContent" class="hidden border-t border-gray-200 p-4 bg-white">
+                    <div class="flex gap-3">
+                        <input id="apiKey" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your Gemini API key" type="password">
+                        <a class="px-4 py-3 text-gray-600 font-medium hover:text-indigo-600 rounded-lg hover:bg-gray-50 transition whitespace-nowrap" href="https://aistudio.google.com/app/apikey" target="_blank">Get API Key</a>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Your key is stored locally in the browser and is only used for requests to Google Gemini.
+                    </p>
+                </div>
             </div>
-            <p class="text-xs text-gray-500 mt-2 flex items-center">
-                <span class="material-icons text-sm mr-1">vpn_key</span>
-                API key connects directly to Google Gemini • Stored securely in your browser's local storage
-            </p>
         </div>
         
         <!-- Main Content Area -->

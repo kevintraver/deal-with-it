@@ -39,10 +39,28 @@ class DealWithItApp {
     const copyBtn = document.getElementById('copyBtn')
     const downloadBtn = document.getElementById('downloadBtn')
 
+    // API Key Collapsible
+    const apiKeyToggle = document.getElementById('apiKeyToggle')
+    const apiKeyContent = document.getElementById('apiKeyContent')
+    const expandIcon = document.getElementById('expandIcon')
+    
+    apiKeyToggle?.addEventListener('click', () => {
+      const isHidden = apiKeyContent.classList.contains('hidden')
+      
+      if (isHidden) {
+        apiKeyContent.classList.remove('hidden')
+        expandIcon.classList.add('rotate-180')
+      } else {
+        apiKeyContent.classList.add('hidden')
+        expandIcon.classList.remove('rotate-180')
+      }
+    })
+
     // API Key
     apiKeyInput.addEventListener('input', () => {
       this.saveApiKey()
       this.updateSubmitButtonState()
+      this.updateApiKeyStatus()
     })
 
     // Tab switching
@@ -722,6 +740,12 @@ class DealWithItApp {
     if (savedKey) {
       document.getElementById('apiKey').value = savedKey
       this.updateSubmitButtonState()
+      this.updateApiKeyStatus()
+      // Collapse the API key section when key is present
+      this.setApiKeyCollapsed(true)
+    } else {
+      // Expand the API key section when no key is present
+      this.setApiKeyCollapsed(false)
     }
   }
 
@@ -731,6 +755,30 @@ class DealWithItApp {
       localStorage.setItem('gemini_api_key', apiKey)
     } else {
       localStorage.removeItem('gemini_api_key')
+    }
+  }
+
+  updateApiKeyStatus() {
+    const apiKey = document.getElementById('apiKey').value
+    const apiKeyStatus = document.getElementById('apiKeyStatus')
+    
+    if (apiKey && apiKey.trim()) {
+      apiKeyStatus?.classList.remove('hidden')
+    } else {
+      apiKeyStatus?.classList.add('hidden')
+    }
+  }
+
+  setApiKeyCollapsed(collapsed) {
+    const apiKeyContent = document.getElementById('apiKeyContent')
+    const expandIcon = document.getElementById('expandIcon')
+    
+    if (collapsed) {
+      apiKeyContent?.classList.add('hidden')
+      expandIcon?.classList.remove('rotate-180')
+    } else {
+      apiKeyContent?.classList.remove('hidden')
+      expandIcon?.classList.add('rotate-180')
     }
   }
 
@@ -749,6 +797,9 @@ class DealWithItApp {
         apiKeyInput.value = apiKeyParam
         this.saveApiKey()
         this.updateSubmitButtonState()
+        this.updateApiKeyStatus()
+        // Collapse the API key section when auto-filled from URL
+        this.setApiKeyCollapsed(true)
 
         // Remove sensitive params from the address bar without reloading
         ;['apiKey', 'apikey', 'key'].forEach((k) => params.delete(k))
