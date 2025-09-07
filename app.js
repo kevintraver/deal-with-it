@@ -528,12 +528,44 @@ class DealWithItApp {
     const submitBtn = document.getElementById('submitBtn')
     const apiKey = document.getElementById('apiKey').value
 
-    if (this.imageLoaded && apiKey) {
+    const hasImage = this.imageLoaded
+    const hasKey = Boolean(apiKey)
+
+    // Utility helpers to toggle classes safely
+    const add = (...cls) => submitBtn.classList.add(...cls)
+    const remove = (...cls) => submitBtn.classList.remove(...cls)
+
+    // Base primary button styles
+    const primary = ['bg-indigo-600', 'hover:bg-indigo-700', 'text-white']
+    const warn = ['bg-yellow-50', 'text-yellow-800', 'border', 'border-yellow-300']
+    const disabledVariants = ['disabled:opacity-50', 'disabled:cursor-not-allowed']
+
+    if (hasImage && hasKey) {
+      // Ready to submit
       submitBtn.disabled = false
-      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed')
-    } else {
+      submitBtn.textContent = 'Deal with it'
+      submitBtn.removeAttribute('title')
+      // Ensure primary look
+      add(...primary)
+      remove(...warn, 'opacity-50', 'cursor-not-allowed')
+      // Re-enable default disabled variants for future states
+      add(...disabledVariants)
+    } else if (hasImage && !hasKey) {
+      // Image loaded but no API key: make this super obvious
       submitBtn.disabled = true
-      submitBtn.classList.add('opacity-50', 'cursor-not-allowed')
+      submitBtn.textContent = 'Enter your API key above to continue'
+      submitBtn.title = 'Add your Gemini API key in the field above to enable this button'
+      // Warning look (not faded)
+      add('cursor-not-allowed', ...warn)
+      remove(...primary, ...disabledVariants, 'opacity-50')
+    } else {
+      // No image yet
+      submitBtn.disabled = true
+      submitBtn.textContent = 'Upload an image to start'
+      submitBtn.removeAttribute('title')
+      // Keep primary style but faded via disabled variants
+      add(...primary, ...disabledVariants)
+      remove(...warn)
     }
   }
 
