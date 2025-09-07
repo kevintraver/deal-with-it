@@ -50,84 +50,95 @@
             </p>
         </div>
         
-        <!-- Upload Tabs (Always visible) -->
-        <div id="uploadTabs" class="mt-8 mb-4">
-            <div class="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 w-full max-w-md mx-auto" role="tablist">
-                <button id="uploadFileBtn" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white shadow text-gray-800 w-full text-center" aria-selected="true">Upload File</button>
-                <button id="uploadUrlBtn" class="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:text-gray-800 w-full text-center" aria-selected="false">From URL</button>
-            </div>
-        </div>
-        
-        <!-- Error Message -->
-        <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg" role="alert" aria-live="polite">
-            <p id="errorText"></p>
-        </div>
-
-        <!-- Image Display Area (Hidden initially) -->
-        <div id="imageArea" class="mt-8 hidden">
-            <div class="w-full bg-white rounded-lg border border-gray-200 p-4 relative">
-                <img id="displayedImage" class="w-full h-auto rounded-md">
-                <!-- Change Image Button -->
-                <button id="changeImageBtn" class="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-white transition shadow-sm border border-gray-200">
-                    Change Image
-                </button>
-            </div>
-        </div>
-
-        <!-- Upload Area -->
-        <div id="uploadArea" class="mt-4">
-            <!-- File Upload Content -->
-            <div id="fileUploadContent" class="w-full bg-white rounded-lg border border-gray-200 p-4">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-50 transition h-[240px] flex flex-col items-center justify-center">
-                    <span class="material-icons text-gray-400 text-5xl mb-3">cloud_upload</span>
-                    <p class="text-gray-600 mb-2">Drag & drop your photo here</p>
-                    <p class="text-gray-400 text-sm mb-4">or paste from clipboard (Ctrl/⌘+V) or click to browse</p>
-                    <div class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
-                        Choose File
-                    </div>
-                    <input class="hidden" id="imageInput" type="file" accept="image/*">
+        <!-- Main Content Area -->
+        <div id="mainContentArea" class="mt-8 relative">
+            <!-- Upload Tabs (Always visible) -->
+            <div id="uploadTabs" class="mb-4">
+                <div class="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 w-full max-w-md mx-auto" role="tablist">
+                    <button id="uploadFileBtn" class="px-4 py-2 text-sm font-semibold rounded-lg bg-white shadow text-gray-800 w-full text-center" aria-selected="true">Upload File</button>
+                    <button id="uploadUrlBtn" class="px-4 py-2 text-sm font-semibold rounded-lg text-gray-600 hover:text-gray-800 w-full text-center" aria-selected="false">From URL</button>
                 </div>
             </div>
             
-            <!-- URL Upload Content -->
-            <div id="urlUploadContent" class="hidden w-full bg-white rounded-lg border border-gray-200 p-4">
-                <div class="text-center h-[240px] flex flex-col items-center justify-center">
-                    <span class="material-icons text-gray-400 text-5xl mb-3">link</span>
-                    <p class="text-gray-600 mb-2">Enter image URL</p>
-                    <p class="text-gray-400 text-sm mb-4">We'll download and process the image</p>
-                    <input id="imageUrlInput" class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4" placeholder="https://example.com/image.jpg" type="url">
-                    <button id="loadUrlBtn" class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
-                        Load Image
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg" role="alert" aria-live="polite">
+                <p id="errorText"></p>
+            </div>
+
+            <!-- Image Display Area (Hidden initially) -->
+            <div id="imageArea" class="mt-8 hidden">
+                <div class="w-full bg-white rounded-lg border border-gray-200 p-4 relative">
+                    <img id="displayedImage" class="w-full h-auto rounded-md">
+                    <!-- Change Image Button -->
+                    <button id="changeImageBtn" class="absolute top-2 right-2 bg-white/90 backdrop-blur text-gray-700 px-3 py-1 rounded-md text-sm font-medium hover:bg-white transition shadow-sm border border-gray-200">
+                        Change Image
                     </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Action buttons (hidden initially) -->
-        <div id="actionButtons" class="hidden mt-8 flex justify-center space-x-4">
-            <button id="copyBtn" class="flex items-center justify-center w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
-                <span class="material-icons mr-2">content_copy</span>
-                Copy
-            </button>
-            <button id="downloadBtn" class="flex items-center justify-center w-full py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                <span class="material-icons mr-2">download</span>
-                Download
-            </button>
-        </div>
-        
-        <!-- Optional Prompt Field -->
-        <div class="mt-8">
-            <label for="additionalPrompt" class="block text-sm font-medium text-gray-700">
-                Additional Instructions (Optional)
-            </label>
-            <textarea id="additionalPrompt" class="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="4" placeholder="e.g., make the sunglasses gold, add a hat, change the background color..."></textarea>
-        </div>
+            <!-- Upload Area -->
+            <div id="uploadArea" class="mt-4">
+                <!-- File Upload Content -->
+                <div id="fileUploadContent" class="w-full bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-50 transition h-[240px] flex flex-col items-center justify-center">
+                        <span class="material-icons text-gray-400 text-5xl mb-3">cloud_upload</span>
+                        <p class="text-gray-600 mb-2">Drag & drop your photo here</p>
+                        <p class="text-gray-400 text-sm mb-4">or paste from clipboard (Ctrl/⌘+V) or click to browse</p>
+                        <div class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                            Choose File
+                        </div>
+                        <input class="hidden" id="imageInput" type="file" accept="image/*">
+                    </div>
+                </div>
+                
+                <!-- URL Upload Content -->
+                <div id="urlUploadContent" class="hidden w-full bg-white rounded-lg border border-gray-200 p-4">
+                    <div class="text-center h-[240px] flex flex-col items-center justify-center">
+                        <span class="material-icons text-gray-400 text-5xl mb-3">link</span>
+                        <p class="text-gray-600 mb-2">Enter image URL</p>
+                        <p class="text-gray-400 text-sm mb-4">We'll download and process the image</p>
+                        <input id="imageUrlInput" class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4" placeholder="https://example.com/image.jpg" type="url">
+                        <button id="loadUrlBtn" class="bg-indigo-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                            Load Image
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Submit Button -->
-        <div class="mt-8">
-            <button id="submitBtn" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                Deal with it
-            </button>
+            <!-- Action buttons (hidden initially) -->
+            <div id="actionButtons" class="hidden mt-8 flex justify-center space-x-4">
+                <button id="copyBtn" class="flex items-center justify-center w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
+                    <span class="material-icons mr-2">content_copy</span>
+                    Copy
+                </button>
+                <button id="downloadBtn" class="flex items-center justify-center w-full py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                    <span class="material-icons mr-2">download</span>
+                    Download
+                </button>
+            </div>
+            
+            <!-- Optional Prompt Field -->
+            <div class="mt-8">
+                <label for="additionalPrompt" class="block text-sm font-medium text-gray-700">
+                    Additional Instructions (Optional)
+                </label>
+                <textarea id="additionalPrompt" class="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="4" placeholder="e.g., make the sunglasses gold, add a hat, change the background color..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-8">
+                <button id="submitBtn" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Deal with it
+                </button>
+            </div>
+
+            <!-- Full Page Processing Overlay -->
+            <div id="processingOverlay" class="absolute inset-0 bg-white bg-opacity-90 rounded-xl flex items-center justify-center hidden z-20">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p id="processingText" class="text-gray-600 font-semibold">Dealing with it...</p>
+                </div>
+            </div>
         </div>
         
         <!-- GitHub Link -->
