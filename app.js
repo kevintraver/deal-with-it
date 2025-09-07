@@ -270,21 +270,25 @@ class DealWithItApp {
       }
       const blob = await resp.blob()
 
-      // Load image from a blob URL to avoid CORS/taint issues
-      const objectUrl = URL.createObjectURL(blob)
+      // Convert blob to data URL to avoid object URL cleanup issues
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+
+      // Load image from data URL
       const img = new Image()
       img.crossOrigin = 'anonymous'
       await new Promise((resolve, reject) => {
         img.onload = resolve
         img.onerror = () => reject(new Error('Failed to load image'))
-        img.src = objectUrl
+        img.src = dataUrl
       })
 
       this.originalImage = img
-      this.displayImage(objectUrl)
-
-      // Clean up the object URL after the image is displayed
-      URL.revokeObjectURL(objectUrl)
+      this.displayImage(dataUrl)
 
       loadBtn.textContent = originalText
       loadBtn.disabled = false
