@@ -258,27 +258,33 @@ class DealWithItApp {
       loadBtn.textContent = 'Loading...'
       loadBtn.disabled = true
 
-      // Try to load the image directly first
+      // Fetch via our CORS-friendly proxy and validate it's an image
+      const proxiedUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`
+      const resp = await fetch(proxiedUrl)
+      if (!resp.ok) {
+        throw new Error('Failed to fetch image from URL')
+      }
+      const contentType = resp.headers.get('content-type') || ''
+      if (!contentType.startsWith('image/')) {
+        throw new Error('URL does not point to an image')
+      }
+      const blob = await resp.blob()
+
+      // Load image from a blob URL to avoid CORS/taint issues
+      const objectUrl = URL.createObjectURL(blob)
       const img = new Image()
       img.crossOrigin = 'anonymous'
-
-      const imageLoaded = new Promise((resolve, reject) => {
-        img.onload = () => resolve(img)
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
         img.onerror = () => reject(new Error('Failed to load image'))
+        img.src = objectUrl
       })
 
-      img.src = url
-      const loadedImg = await imageLoaded
+      this.originalImage = img
+      this.displayImage(objectUrl)
 
-      // Create canvas to get the image data
-      const canvas = document.createElement('canvas')
-      canvas.width = loadedImg.width
-      canvas.height = loadedImg.height
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(loadedImg, 0, 0)
-
-      this.originalImage = loadedImg
-      this.displayImage(canvas.toDataURL())
+      // Clean up the object URL after the image is displayed
+      URL.revokeObjectURL(objectUrl)
 
       loadBtn.textContent = originalText
       loadBtn.disabled = false
